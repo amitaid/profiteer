@@ -10,7 +10,7 @@ public class Main {
         Server server = new Server();
 
         vertx.deployVerticle(server);
-
+        vertx.deployVerticle(new PriceChecker());
 
 
     }
