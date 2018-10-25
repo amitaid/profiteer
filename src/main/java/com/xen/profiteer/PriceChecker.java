@@ -32,14 +32,15 @@ public class PriceChecker extends AbstractVerticle {
 
         eb.<String>consumer(PRICE_CHECK, message -> {
             String itemId = message.body();
-            log.debug("Price check for item id " + itemId);
+            log.info("Price check for item id " + itemId);
             if (itemDb.containsKey(itemId)) {
-                log.info("Item %s already in db, returning cached version", itemId);
+                log.debug("Item %s already in db, returning cached version", itemId);
                 message.reply(itemDb.get(itemId));
             } else {
                 String requestPath = ITEM_PATH + TujApiPaths.DEFAULT_REALM + "&item=" + itemId;
                 HttpRequest request = HttpRequest.newBuilder(URI.create(requestPath)).GET().build();
 
+                // Using Java basic client because I'm getting a netty error when using the vertx one
                 client.sendAsync(request, HttpResponse.BodyHandlers.ofString())
                         .thenApplyAsync(response -> {
                             if (response.statusCode() == 200) {
