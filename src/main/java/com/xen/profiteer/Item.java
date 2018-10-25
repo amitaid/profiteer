@@ -9,6 +9,6 @@ public class Item {
 
     private String itemId;
     private String itemName;
-    private long currentPrice; // copper
+    private Long currentPrice; // copper
 
 }

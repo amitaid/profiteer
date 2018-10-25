@@ -15,6 +15,9 @@ import java.util.Map;
 
 public class PriceChecker extends AbstractVerticle {
 
+    public static final String STATS = "stats";
+    public static final String NAME = "name_enus";
+    public static final String PRICE = "price";
     private final Logger log = LoggerFactory.getLogger(PriceChecker.class);
 
     private static final String ITEM_PATH = TujApiPaths.BASE_PATH + TujApiPaths.ITEM_PATH;
@@ -34,9 +37,10 @@ public class PriceChecker extends AbstractVerticle {
             log.info("Price check for item id " + itemId);
 
             if (itemDb.containsKey(itemId)) {
-                log.debug("Item %s already in db, returning cached version", itemId);
+                log.debug(String.format("Item %s already in db, returning cached version", itemId));
                 message.reply(JsonObject.mapFrom(itemDb.get(itemId)).toString());
             } else {
+                log.debug(String.format("Item %s not in db, returning cached version", itemId));
                 String requestPath = ITEM_PATH + TujApiPaths.DEFAULT_REALM + "&item=" + itemId;
                 HttpRequest request = HttpRequest.newBuilder(URI.create(requestPath)).GET().build();
 
@@ -46,9 +50,9 @@ public class PriceChecker extends AbstractVerticle {
                             if (response.statusCode() == 200) {
                                 log.debug("Received reply for itemId " + itemId + ", " + response.body());
                                 JsonObject jsonResponse = new JsonObject(response.body());
-                                JsonObject stats = jsonResponse.getJsonArray("stats").getJsonObject(0);
-                                String itemName = stats.getString("name_enus");
-                                long price = stats.getInteger("price");
+                                JsonObject stats = jsonResponse.getJsonArray(STATS).getJsonObject(0);
+                                String itemName = stats.getString(NAME);
+                                Long price = stats.getLong(PRICE);
                                 Item item = new Item(itemId, itemName, price);
                                 log.debug(item.toString());
 
