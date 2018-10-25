@@ -18,24 +18,24 @@ public class PriceChecker extends AbstractVerticle {
     private final Logger log = LoggerFactory.getLogger(PriceChecker.class);
 
     private static final String ITEM_PATH = TujApiPaths.BASE_PATH + TujApiPaths.ITEM_PATH;
+
+    // This Verticle's functionality
     public static final String PRICE_CHECK = "PRICE_CHECK";
 
-    private HttpClient client = HttpClient.newHttpClient();
-    private EventBus eb;
-
-
-    private Map<String, Item> itemDb = new HashMap<>();
+    private final HttpClient client = HttpClient.newHttpClient();
+    private final Map<String, Item> itemDb = new HashMap<>();
 
     @Override
     public void start() {
-        eb = vertx.eventBus();
+        EventBus eb = vertx.eventBus();
 
         eb.<String>consumer(PRICE_CHECK, message -> {
             String itemId = message.body();
             log.info("Price check for item id " + itemId);
+
             if (itemDb.containsKey(itemId)) {
                 log.debug("Item %s already in db, returning cached version", itemId);
-                message.reply(itemDb.get(itemId));
+                message.reply(JsonObject.mapFrom(itemDb.get(itemId)).toString());
             } else {
                 String requestPath = ITEM_PATH + TujApiPaths.DEFAULT_REALM + "&item=" + itemId;
                 HttpRequest request = HttpRequest.newBuilder(URI.create(requestPath)).GET().build();
