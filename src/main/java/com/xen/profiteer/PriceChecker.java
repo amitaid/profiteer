@@ -2,6 +2,7 @@ package com.xen.profiteer;
 
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.eventbus.EventBus;
+import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
@@ -50,17 +51,22 @@ public class PriceChecker extends AbstractVerticle {
                             if (response.statusCode() == 200) {
                                 log.debug("Received reply for itemId " + itemId + ", " + response.body());
                                 JsonObject jsonResponse = new JsonObject(response.body());
-                                JsonObject stats = jsonResponse.getJsonArray(STATS).getJsonObject(0);
-                                String itemName = stats.getString(NAME);
-                                Long price = stats.getLong(PRICE);
-                                Item item = new Item(itemId, itemName, price);
-                                log.debug(item.toString());
+                                JsonArray statsArray = jsonResponse.getJsonArray(STATS);
+                                if (statsArray.size() == 0) {
+                                    message.fail(500, "There were no item stats");
+                                } else {
+                                    JsonObject stats = statsArray.getJsonObject(0);
+                                    String itemName = stats.getString(NAME);
+                                    Long price = stats.getLong(PRICE);
+                                    Item item = new Item(itemId, itemName, price);
+                                    log.debug(item.toString());
 
-                                itemDb.put(itemId, item);
-                                message.reply(JsonObject.mapFrom(item).toString());
+                                    itemDb.put(itemId, item);
+                                    message.reply(JsonObject.mapFrom(item).toString());
+                                }
                             } else {
                                 log.error("Response code was " + response.statusCode());
-                                message.reply(JsonObject.mapFrom(null));
+                                message.fail(500, "The server had a stroke while processing your bullshit");
                             }
                             return itemId;
                         });

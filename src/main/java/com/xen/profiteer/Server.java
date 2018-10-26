@@ -6,6 +6,7 @@ import io.vertx.core.http.HttpServer;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
 import io.vertx.ext.web.Router;
+import io.vertx.ext.web.RoutingContext;
 
 public class Server extends AbstractVerticle {
 
@@ -22,13 +23,26 @@ public class Server extends AbstractVerticle {
 
         router.get("/").handler(req -> req.response().end("What's this OwO"));
 
-        router.get("/item/:itemId").produces("application/json").handler(ctx ->
-                eb.<String>send(PriceChecker.PRICE_CHECK, ctx.pathParam("itemId"), reply -> {
-                    log.debug("Got reply " + reply.result().body());
-                    ctx.response().end(reply.result().body());
-                }));
+        router.get("/item/:itemId").produces("application/json").handler(this::getItemDetails);
 
         httpServer.requestHandler(router::accept).listen(8080);
+    }
+
+    private void getItemDetails(RoutingContext ctx) {
+        String itemId = ctx.pathParam("itemId");
+        try {
+            Integer.parseInt(itemId);
+        } catch (NumberFormatException e) {
+            ctx.response().setStatusCode(500).end();
+        }
+
+        eb.<String>send(PriceChecker.PRICE_CHECK, itemId, reply -> {
+            if (reply.succeeded()) {
+                String result = reply.result().body();
+                log.debug("Got reply " + result);
+                ctx.response().end(result);
+            }
+        });
     }
 
 
