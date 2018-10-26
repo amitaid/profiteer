@@ -25,6 +25,12 @@ public class Server extends AbstractVerticle {
 
         router.get("/item/:itemId").produces("application/json").handler(this::getItemDetails);
 
+        router.get("/prof/:profName").handler(ctx -> {
+            eb.<String>send(WowdbScraper.BRING_ME, ctx.pathParam("profName"), reply -> {
+                ctx.response().end(reply.result().body());
+            });
+        });
+
         httpServer.requestHandler(router::accept).listen(8080);
     }
 
@@ -41,6 +47,8 @@ public class Server extends AbstractVerticle {
                 String result = reply.result().body();
                 log.debug("Got reply " + result);
                 ctx.response().end(result);
+            } else {
+                ctx.response().setStatusCode(500).end("Something bad happened");
             }
         });
     }

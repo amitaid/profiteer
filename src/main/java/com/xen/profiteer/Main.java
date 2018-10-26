@@ -11,6 +11,7 @@ public class Main {
 
         vertx.deployVerticle(server);
         vertx.deployVerticle(new PriceChecker());
+        vertx.deployVerticle(new WowdbScraper());
 
 
     }
