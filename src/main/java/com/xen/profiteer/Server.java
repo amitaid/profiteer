@@ -26,7 +26,7 @@ public class Server extends AbstractVerticle {
         router.get("/item/:itemId").produces("application/json").handler(this::getItemDetails);
 
         router.get("/prof/:profName").handler(ctx -> {
-            eb.<String>send(WowdbScraper.BRING_ME, ctx.pathParam("profName"), reply -> {
+            eb.<String>send(WowdbReader.BRING_ME, ctx.pathParam("profName"), reply -> {
                 ctx.response().end(reply.result().body());
             });
         });

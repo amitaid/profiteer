@@ -9,7 +9,7 @@ import io.vertx.core.logging.LoggerFactory;
 
 import java.util.List;
 
-public class WowdbScraper extends AbstractVerticle {
+public class WowdbReader extends AbstractVerticle {
 
     private static String PROFESSION_BASE = "/spells/professions/%s?filter-expansion=8&filter-creates-item=1";
     private static final String WOWDB_HOST = "www.wowdb.com";
@@ -17,7 +17,7 @@ public class WowdbScraper extends AbstractVerticle {
 
     public static String BRING_ME = "a.shrubbery";
 
-    private final Logger log = LoggerFactory.getLogger(WowdbScraper.class);
+    private final Logger log = LoggerFactory.getLogger(WowdbReader.class);
     private HttpClient client;
 
     @Override
