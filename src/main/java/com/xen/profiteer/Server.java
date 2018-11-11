@@ -14,21 +14,19 @@ public class Server extends AbstractVerticle {
 
 
     private EventBus eb;
-    private Router router = Router.router(vertx);
-
     @Override
     public void start() {
         eb = vertx.eventBus();
         HttpServer httpServer = vertx.createHttpServer();
+        Router router = Router.router(vertx);
 
         router.get("/").handler(req -> req.response().end("What's this OwO"));
 
         router.get("/item/:itemId").produces("application/json").handler(this::getItemDetails);
 
         router.get("/prof/:profName").handler(ctx -> {
-            eb.<String>send(WowdbReader.BRING_ME, ctx.pathParam("profName"), reply -> {
-                ctx.response().end(reply.result().body());
-            });
+            eb.<String>send(WowdbReader.BRING_ME, ctx.pathParam("profName"),
+                    reply -> ctx.response().end(reply.result().body()));
         });
 
         httpServer.requestHandler(router::accept).listen(8080);

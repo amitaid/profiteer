@@ -1,46 +1,95 @@
 package com.xen.profiteer;
 
-import com.xen.profiteer.commons.ConfigItems;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.eventbus.EventBus;
-import io.vertx.core.http.HttpClient;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
+import io.vertx.ext.web.client.WebClient;
+import org.apache.commons.text.StringEscapeUtils;
 
+import java.util.Arrays;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 public class WowdbReader extends AbstractVerticle {
 
+    // Professions search page. Filtered for BfA spells that create items.
     private static String PROFESSION_BASE = "/spells/professions/%s?filter-expansion=8&filter-creates-item=1";
     private static final String WOWDB_HOST = "www.wowdb.com";
     private static final int SSL_PORT = 443;
 
+    private static final Pattern craftedItem =
+            Pattern.compile("/items/(\\d+)-.*? t\".*?>(.+?)</a>", Pattern.MULTILINE | Pattern.DOTALL);
+    private static final Pattern ingredients =
+            Pattern.compile("<a href=.*?/items/(\\d+).*?overlay\">(\\d+).*?</a>");
+
     public static String BRING_ME = "a.shrubbery";
 
     private final Logger log = LoggerFactory.getLogger(WowdbReader.class);
-    private HttpClient client;
+    private WebClient client;
 
     @Override
     public void start() {
         EventBus eb = vertx.eventBus();
-        client = vertx.createHttpClient(ConfigItems.DEFAULT_CLIENT_OPTIONS
-                .setDefaultHost(WOWDB_HOST).setDefaultPort(SSL_PORT));
+        client = WebClient.create(vertx);
 
         eb.<String>consumer(BRING_ME, message -> {
             String prof = message.body();
-            String professionUrl = String.format(PROFESSION_BASE, prof);
+            String professionUri = String.format(PROFESSION_BASE, prof);
 
-            log.info("Retrieving " + professionUrl);
-            client.getNow(professionUrl, response -> {
-                response.bodyHandler(body -> message.reply(body.toString()));
+            log.info("Retrieving craftables for " + prof);
+
+            client.get(SSL_PORT, WOWDB_HOST, professionUri).ssl(true).send(res -> {
+                if (res.succeeded()) {
+                    String response = getItemsFromPage(res.result().bodyAsString());
+                    message.reply(response);
+                } else {
+                    log.error("Request error, {}, {}", res.result().statusCode(), professionUri);
+                }
             });
 
         });
 
     }
 
-    private List<String> getItemsFromPage(String pageBody) {
-        return null;
+    private CraftedItem getItemFromChunk(String chunk) {
+        chunk = StringEscapeUtils.unescapeHtml4(chunk);
+
+        Matcher nameMatcher = craftedItem.matcher(chunk);
+        String id = null;
+        String name = null;
+        if (nameMatcher.find()) {
+            id = nameMatcher.group(1);
+            name = nameMatcher.group(2);
+        } else {
+            log.info("failed on\n" + chunk);
+        }
+        CraftedItem item = new CraftedItem(name, id);
+
+        Matcher ingredientsMatcher = ingredients.matcher(chunk);
+        while (ingredientsMatcher.find()) {
+            item.addIngredient(ingredientsMatcher.group(1), Integer.parseInt(ingredientsMatcher.group(2)));
+        }
+
+        return item;
+    }
+
+    private String getItemsFromPage(String pageBody) {
+        String list = pageBody.lines()
+                .dropWhile(l -> !l.contains("<td class=\"col-name\">"))
+                .takeWhile(l -> !l.contains("<div class=\"listing-footer\">"))
+                .collect(Collectors.joining("\n"));
+        String[] rows = list.split("<tr class=\"(?:even|odd)\">");
+        log.info("chunks = " + rows.length);
+        List<CraftedItem> items = Arrays.stream(rows)
+                .filter(s -> !(s.contains("Rank 1") || s.contains("Rank 2")))
+                .skip(1)
+                .map(this::getItemFromChunk)
+                .collect(Collectors.toList());
+        return items.stream().map(CraftedItem::toString).collect(Collectors.joining("\n"));
+
     }
 
     // Professions are unlikely to change between expansions,

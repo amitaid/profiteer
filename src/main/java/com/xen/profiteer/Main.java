@@ -7,11 +7,10 @@ public class Main {
     public static void main(String[] args) {
 
         Vertx vertx = Vertx.vertx();
-        Server server = new Server();
 
-        vertx.deployVerticle(server);
         vertx.deployVerticle(new PriceChecker());
         vertx.deployVerticle(new WowdbReader());
+        vertx.deployVerticle(new Server());
 
 
     }
