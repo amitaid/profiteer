@@ -9,6 +9,7 @@ import org.apache.commons.text.StringEscapeUtils;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -64,7 +65,7 @@ public class WowdbReader extends AbstractVerticle {
             id = nameMatcher.group(1);
             name = nameMatcher.group(2);
         } else {
-            log.info("failed on\n" + chunk);
+            return null;
         }
         CraftedItem item = new CraftedItem(name, id);
 
@@ -84,9 +85,10 @@ public class WowdbReader extends AbstractVerticle {
         String[] rows = list.split("<tr class=\"(?:even|odd)\">");
         log.info("chunks = " + rows.length);
         List<CraftedItem> items = Arrays.stream(rows)
-                .filter(s -> !(s.contains("Rank 1") || s.contains("Rank 2")))
+                .filter(s -> !(s.contains("Rank 1") || s.contains("Rank 2") || s.contains("REUSE ME")))
                 .skip(1)
                 .map(this::getItemFromChunk)
+                .filter(Objects::nonNull)
                 .collect(Collectors.toList());
         return items.stream().map(CraftedItem::toString).collect(Collectors.joining("\n"));
 
