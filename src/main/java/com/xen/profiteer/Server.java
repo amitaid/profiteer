@@ -1,22 +1,28 @@
 package com.xen.profiteer;
 
+import com.xen.profiteer.codec.JsonCodec;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.eventbus.EventBus;
 import io.vertx.core.http.HttpServer;
-import io.vertx.core.logging.Logger;
-import io.vertx.core.logging.LoggerFactory;
+import io.vertx.core.json.Json;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
+import lombok.extern.java.Log;
 
+import java.util.ArrayList;
+
+@Log
 public class Server extends AbstractVerticle {
 
-    private final Logger log = LoggerFactory.getLogger(Server.class);
-
-
     private EventBus eb;
+
     @Override
     public void start() {
         eb = vertx.eventBus();
+        eb.registerDefaultCodec(ArrayList.class, new JsonCodec<>(ArrayList.class));
+        eb.registerDefaultCodec(Item.class, new JsonCodec<>(Item.class));
+        eb.registerDefaultCodec(CraftedItem.class, new JsonCodec<>(CraftedItem.class));
+
         HttpServer httpServer = vertx.createHttpServer();
         Router router = Router.router(vertx);
 
@@ -25,8 +31,8 @@ public class Server extends AbstractVerticle {
         router.get("/item/:itemId").produces("application/json").handler(this::getItemDetails);
 
         router.get("/prof/:profName").handler(ctx -> {
-            eb.<String>send(WowdbReader.BRING_ME, ctx.pathParam("profName"),
-                    reply -> ctx.response().end(reply.result().body()));
+            eb.<String>send(ItemCache.CHECK_PROFESSION_ITEMS, ctx.pathParam("profName"),
+                    reply -> ctx.response().end(Json.encodePrettily(reply.result().body())));
         });
 
         httpServer.requestHandler(router::accept).listen(8080);
@@ -40,14 +46,11 @@ public class Server extends AbstractVerticle {
             ctx.response().setStatusCode(500).end();
         }
 
-        eb.<String>send(PriceChecker.PRICE_CHECK, itemId, reply -> {
-            if (reply.succeeded()) {
-                String result = reply.result().body();
-                log.debug("Got reply " + result);
-                ctx.response().end(result);
-            } else {
-                ctx.response().setStatusCode(500).end("Something bad happened");
-            }
+        eb.<Item>send(ItemCache.CHECK_ITEM_PRICE, itemId, reply -> {
+            log.info("Getting item " + itemId);
+            Item result = reply.result().body();
+            ctx.response().end(Json.encodePrettily(result));
+
         });
     }
 

@@ -11,13 +11,13 @@ class CraftedItem {
     private String itemId;
     private final Map<String, Integer> ingredients = new HashMap<>();
 
-    public CraftedItem(String itemName, String itemId) {
-        this.itemName = itemName;
+    public CraftedItem(String itemId, String itemName) {
         this.itemId = itemId;
+        this.itemName = itemName;
     }
 
-    public void addIngredient(String id, int amount) {
-        ingredients.put(id, amount);
+    public void addIngredient(String itemId, int amount) {
+        ingredients.put(itemId, amount);
     }
 
 }

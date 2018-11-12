@@ -11,6 +11,7 @@ public class Main {
 
         vertx.deployVerticle(new PriceChecker(), new DeploymentOptions().setWorker(true));
         vertx.deployVerticle(new WowdbReader(), new DeploymentOptions().setWorker(true));
+        vertx.deployVerticle(new ItemCache());
         vertx.deployVerticle(new Server());
 
 

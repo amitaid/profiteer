@@ -2,9 +2,8 @@ package com.xen.profiteer;
 
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.eventbus.EventBus;
-import io.vertx.core.logging.Logger;
-import io.vertx.core.logging.LoggerFactory;
 import io.vertx.ext.web.client.WebClient;
+import lombok.extern.java.Log;
 import org.apache.commons.text.StringEscapeUtils;
 
 import java.util.Arrays;
@@ -14,6 +13,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
+@Log
 public class WowdbReader extends AbstractVerticle {
 
     // Professions search page. Filtered for BfA spells that create items.
@@ -28,7 +28,6 @@ public class WowdbReader extends AbstractVerticle {
 
     public static String BRING_ME = "a.shrubbery";
 
-    private final Logger log = LoggerFactory.getLogger(WowdbReader.class);
     private WebClient client;
 
     @Override
@@ -44,10 +43,10 @@ public class WowdbReader extends AbstractVerticle {
 
             client.get(SSL_PORT, WOWDB_HOST, professionUri).ssl(true).send(res -> {
                 if (res.succeeded()) {
-                    String response = getItemsFromPage(res.result().bodyAsString());
+                    List<CraftedItem> response = getItemsFromPage(res.result().bodyAsString());
                     message.reply(response);
                 } else {
-                    log.error("Request error, {}, {}", res.result().statusCode(), professionUri);
+                    log.severe(res.result().bodyAsString());
                 }
             });
 
@@ -67,7 +66,7 @@ public class WowdbReader extends AbstractVerticle {
         } else {
             return null;
         }
-        CraftedItem item = new CraftedItem(name, id);
+        CraftedItem item = new CraftedItem(id, name);
 
         Matcher ingredientsMatcher = ingredients.matcher(chunk);
         while (ingredientsMatcher.find()) {
@@ -77,7 +76,7 @@ public class WowdbReader extends AbstractVerticle {
         return item;
     }
 
-    private String getItemsFromPage(String pageBody) {
+    private List<CraftedItem> getItemsFromPage(String pageBody) {
         String list = pageBody.lines()
                 .dropWhile(l -> !l.contains("<td class=\"col-name\">"))
                 .takeWhile(l -> !l.contains("<div class=\"listing-footer\">"))
@@ -90,8 +89,7 @@ public class WowdbReader extends AbstractVerticle {
                 .map(this::getItemFromChunk)
                 .filter(Objects::nonNull)
                 .collect(Collectors.toList());
-        return items.stream().map(CraftedItem::toString).collect(Collectors.joining("\n"));
-
+        return items;
     }
 
     // Professions are unlikely to change between expansions,
