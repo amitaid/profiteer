@@ -31,9 +31,13 @@ public class ItemCache extends AbstractVerticle {
                 log.info(String.format("Item %s not in cache, retrieving", itemId));
 
                 eb.<Item>send(PriceChecker.GET_ITEM_PRICE, itemId, reply -> {
-                    Item item = reply.result().body();
-                    itemPrices.put(itemId, item);
-                    message.reply(item);
+                    if (reply.succeeded()) {
+                        Item item = reply.result().body();
+                        itemPrices.put(itemId, item);
+                        message.reply(item);
+                    } else {
+                        message.fail(500, "No price was returned");
+                    }
                 });
             }
         });

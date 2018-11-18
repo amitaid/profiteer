@@ -17,7 +17,7 @@ import java.util.stream.Collectors;
 public class WowdbReader extends AbstractVerticle {
 
     // Professions search page. Filtered for BfA spells that create items.
-    private static String PROFESSION_BASE = "/spells/professions/%s?filter-expansion=8&filter-creates-item=1";
+    private static final String PROFESSION_BASE = "/spells/professions/%s?filter-expansion=8&filter-creates-item=1";
     private static final String WOWDB_HOST = "www.wowdb.com";
     private static final int SSL_PORT = 443;
 
